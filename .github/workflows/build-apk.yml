@@ -1,0 +1,52 @@
+name: Build APK NurTime
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ekstrak zip proyek
+        run: unzip -q NurTime_APK_proj*.zip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Pasang dependensi
+        working-directory: nurtime-apk
+        run: npm install
+
+      - name: Buat proyek Android
+        working-directory: nurtime-apk
+        run: npx cap add android
+
+      - name: Izin, ikon, dan suara adzan
+        working-directory: nurtime-apk
+        run: bash scripts/setup-android.sh
+
+      - name: Sinkronkan file web
+        working-directory: nurtime-apk
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: nurtime-apk/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Unggah APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NurTime-apk
+          path: nurtime-apk/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
